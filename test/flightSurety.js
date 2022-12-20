@@ -64,11 +64,11 @@ contract('Flight Surety Tests', async (accounts) => {
 
     });
 
-    it('(airline) First airline is registered when contract is deployed.', async () => {
+    it('(airline) first airline is registered when contract is deployed.', async () => {
 
         let result = await config.flightSuretyData.isAirline.call(config.firstAirline);
 
-        assert.equal(result, true, "First airline should be registered.");
+        assert.equal(result, true, "first airline should be registered.");
     });
 
     it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
@@ -80,8 +80,9 @@ contract('Flight Surety Tests', async (accounts) => {
         try {
             await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
         } catch (e) {
-
+            console.log(e);
         }
+
         let result = await config.flightSuretyData.isAirline.call(newAirline);
 
         // ASSERT

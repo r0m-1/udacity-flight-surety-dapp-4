@@ -12,7 +12,15 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
-    mapping(address => bool) registeredAirlines;
+
+    struct Airline {
+        bool registered;
+        uint balance;
+    }
+
+    mapping(address => Airline) airlines;
+
+    uint registeredAirlineCount;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -30,7 +38,8 @@ contract FlightSuretyData {
     public
     {
         contractOwner = msg.sender;
-        registeredAirlines[firstAirline] = true;
+        airlines[firstAirline] = Airline({registered : true, balance : 0});
+        registeredAirlineCount = 1;
     }
 
     /********************************************************************************************/
@@ -61,6 +70,18 @@ contract FlightSuretyData {
         _;
     }
 
+    modifier requireIsRegisteredAirline()
+    {
+        require(airlines[msg.or].registered, "Caller is not a registered airline");
+        _;
+    }
+
+    modifier requireIsFundedAirline()
+    {
+        require(airlines[msg.sender].balance >= 10, "Caller is not a funded airline");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
@@ -70,7 +91,7 @@ contract FlightSuretyData {
     view
     returns (bool)
     {
-        return registeredAirlines[_airline];
+        return airlines[_airline].registered;
     }
 
     /**
@@ -113,10 +134,17 @@ contract FlightSuretyData {
     */
     function registerAirline
     (
+        address _airline
     )
+    requireIsRegisteredAirline
+    requireIsFundedAirline
     external
-    pure
     {
+        if (registeredAirlineCount <= 4) {
+            airlines[_airline] = Airline({registered : true, balance : 0});
+        } else {
+            airlines[_airline] = Airline({registered : false, balance : 0});
+        }
     }
 
 

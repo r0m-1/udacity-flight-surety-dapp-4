@@ -6,6 +6,7 @@ pragma solidity ^0.8.17;
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./FlightSuretyData.sol";
 
 /************************************************** */
 /* FlightSurety Smart Contract                      */
@@ -16,6 +17,8 @@ contract FlightSuretyApp {
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
+
+    FlightSuretyData flightSuretyData;
 
     // Flight status codes
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
@@ -66,6 +69,12 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireIsRegisteredAirline()
+    {
+        require(flightSuretyData.isAirline(msg.sender), "Caller is not a registered airline");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -76,9 +85,11 @@ contract FlightSuretyApp {
     */
     constructor
     (
+        address payable dataContract
     )
     {
         contractOwner = msg.sender;
+        flightSuretyData = FlightSuretyData(dataContract);
     }
 
     /********************************************************************************************/
