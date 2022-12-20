@@ -12,6 +12,7 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    mapping(address => bool) registeredAirlines;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -24,10 +25,12 @@ contract FlightSuretyData {
     */
     constructor
     (
+        address firstAirline
     )
     public
     {
         contractOwner = msg.sender;
+        registeredAirlines[firstAirline] = true;
     }
 
     /********************************************************************************************/
@@ -61,6 +64,14 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
+
+    function isAirline(address _airline)
+    public
+    view
+    returns (bool)
+    {
+        return registeredAirlines[_airline];
+    }
 
     /**
     * @dev Get operating status of contract
