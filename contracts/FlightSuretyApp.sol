@@ -6,7 +6,6 @@ pragma solidity ^0.8.17;
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
 import "../node_modules/@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./FlightSuretyData.sol";
 
 /************************************************** */
 /* FlightSurety Smart Contract                      */
@@ -19,6 +18,17 @@ contract FlightSuretyApp {
     /********************************************************************************************/
 
     FlightSuretyData flightSuretyData;
+
+    // multi-party consensus of 50% of registered airlines
+    uint private M = 50;
+
+    // track the number of vote to register an Airline
+    // Key(airline to register) => Airline sponsoring => Called
+    mapping(address => mapping(address => bool)) airlineRegistrationQueue;
+
+    // track the number of vote to register an Airline
+    // Key(Airline to register) => Number of vote
+    mapping(address => uint) votes;
 
     // Flight status codes
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
@@ -111,17 +121,41 @@ contract FlightSuretyApp {
 
 
     /**
-     * @dev Add an airline to the registration queue
+    * @dev Add an airline to the registration queue
     *
     */
     function registerAirline
     (
+        address _airline
     )
+        requireIsRegisteredAirline
+        requireIsOperational
+        // TODO fund >= 10
     external
-    pure
-    returns (bool success, uint256 votes)
+    returns (bool, uint256)
     {
-        return (success, 0);
+        require(!flightSuretyData.isAirline(_airline), 'Airline already registered');
+
+        if (flightSuretyData.getRegisteredAirlineCount() > 4) {
+
+            require(!airlineRegistrationQueue[_airline][msg.sender], 'Airline already registered by calling airline');
+
+            airlineRegistrationQueue[_airline][msg.sender] = true;
+            votes[_airline] = votes[_airline].add(1);
+
+            // if consensus reached - register airline.
+            if (votes[_airline].div(M).mul(100) >= flightSuretyData.getRegisteredAirlineCount()) {
+                flightSuretyData.registerAirline(_airline);
+                return (true, votes[_airline]);
+
+            } else {
+                return (false, votes[_airline]);
+            }
+
+        } else {
+            flightSuretyData.registerAirline(_airline);
+            return (true, 1);
+        }
     }
 
 
@@ -351,4 +385,9 @@ contract FlightSuretyApp {
 
     // endregion
 
-}   
+}
+interface FlightSuretyData {
+    function isAirline(address _airline) external returns (bool);
+    function getRegisteredAirlineCount() external returns (uint);
+    function registerAirline(address _airline) external;
+}

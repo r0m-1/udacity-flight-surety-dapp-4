@@ -71,19 +71,27 @@ contract FlightSuretyData {
 
     modifier requireIsRegisteredAirline()
     {
-        require(airlines[msg.sender].registered, "Caller is not a registered airline");
+        require(airlines[tx.origin].registered, "Caller is not a registered airline");
         _;
     }
 
     modifier requireIsFundedAirline()
     {
-        require(airlines[msg.sender].balance >= 10, "Caller is not a funded airline");
+        require(airlines[tx.origin].balance >= 10, "Caller is not a funded airline");
         _;
     }
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
+
+    function getRegisteredAirlineCount()
+    public
+    view
+    returns (uint)
+    {
+        return registeredAirlineCount;
+    }
 
     function getFund(address _airline)
     public
@@ -147,8 +155,7 @@ contract FlightSuretyData {
     requireIsFundedAirline
     external
     {
-        // todo Only existing airline may register a new airline until there are at least four airlines registered
-        airlines[_airline] = Airline({registered : false, balance : 0});
+        airlines[_airline] = Airline({registered : true, balance : 0});
     }
 
 
@@ -159,9 +166,7 @@ contract FlightSuretyData {
     function buy
     (
     )
-    external
-    payable
-    {
+    external payable {
 
     }
 

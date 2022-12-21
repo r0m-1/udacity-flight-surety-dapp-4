@@ -4,6 +4,13 @@ var BigNumber = require('bignumber.js');
 contract('Flight Surety Tests', async (accounts) => {
 
     var config;
+
+    const foundingEth = web3.utils.toWei('10', "ether")
+
+    let airline2 = accounts[2];
+    let airline3 = accounts[3];
+    let airline4 = accounts[4];
+
     before('setup contract', async () => {
         config = await Test.Scope(accounts);
         // FIXME await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
@@ -73,21 +80,15 @@ contract('Flight Surety Tests', async (accounts) => {
 
     it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
 
-        // ARRANGE
-        let newAirline = accounts[2];
-
-        // ACT
         try {
-            await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
+            await config.flightSuretyApp.registerAirline.call(airline2, {from: config.firstAirline});
         } catch (e) {
-            //console.log(e);
+
         }
 
-        let result = await config.flightSuretyData.isAirline.call(newAirline);
+        let result = await config.flightSuretyData.isAirline.call(airline2);
 
-        // ASSERT
         assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
-
     });
 
     it('(airline) becomes funded with 10 ether', async () => {
@@ -95,33 +96,41 @@ contract('Flight Surety Tests', async (accounts) => {
 
         assert.equal(beforeFunding, 0, "isAirline must be false when airline funding < 10 ether");
 
-        const foundingEth = web3.utils.toWei('10', "ether")
-
-        try {
-            await config.flightSuretyData.sendTransaction({from: config.firstAirline, value: foundingEth});
-        } catch (e) {
-            console.log(e);
-        }
+        await config.flightSuretyData.sendTransaction({from: config.firstAirline, value: foundingEth});
 
         const afterFunding = await config.flightSuretyData.getFund(config.firstAirline);
 
         assert.equal(afterFunding, web3.utils.toWei('10', "ether"), "isAirline must be true when airline funding < 10 ether");
     });
 
-    it('(airline) can register an Airline using registerAirline() if it is funded', async () => {
-        // ARRANGE
-        let newAirline = accounts[2];
+    it('(airline) 1st Airline can register a 2nd Airline using registerAirline() if it is funded', async () => {
 
-        // ACT
-        try {
-            await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
-        } catch (e) {
-            //console.log(e);
-        }
+        await config.flightSuretyData.sendTransaction({from: config.firstAirline, value: foundingEth});
 
-        let result = await config.flightSuretyData.isAirline.call(newAirline);
+        await config.flightSuretyApp.registerAirline(airline2, {from: config.firstAirline});
 
-        // ASSERT
-        assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
+        let result = await config.flightSuretyData.isAirline.call(airline2);
+
+        assert.equal(result, true, "Airline should be able to register another airline if enough funding");
+    });
+
+    it('(airline) 2nd Airline can register 3rd & 4th Airline using registerAirline() if it is funded', async () => {
+
+        await config.flightSuretyData.sendTransaction({from: airline2, value: foundingEth});
+
+        await config.flightSuretyApp.registerAirline(airline3, {from: airline2});
+        await config.flightSuretyApp.registerAirline(airline4, {from: airline2});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline3),
+            true,
+            "Airline should not be able to register another airline if it hasn't provided funding"
+        );
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline4),
+            true,
+            "Airline should not be able to register another airline if it hasn't provided funding"
+        );
     });
 });
