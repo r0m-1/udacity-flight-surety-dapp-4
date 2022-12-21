@@ -35,7 +35,6 @@ contract FlightSuretyData {
     (
         address firstAirline
     )
-    public
     {
         contractOwner = msg.sender;
         airlines[firstAirline] = Airline({registered : true, balance : 0});
@@ -72,7 +71,7 @@ contract FlightSuretyData {
 
     modifier requireIsRegisteredAirline()
     {
-        require(airlines[msg.or].registered, "Caller is not a registered airline");
+        require(airlines[msg.sender].registered, "Caller is not a registered airline");
         _;
     }
 
@@ -85,6 +84,14 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
+
+    function getFund(address _airline)
+    public
+    view
+    returns (uint)
+    {
+        return airlines[_airline].balance;
+    }
 
     function isAirline(address _airline)
     public
@@ -140,11 +147,8 @@ contract FlightSuretyData {
     requireIsFundedAirline
     external
     {
-        if (registeredAirlineCount <= 4) {
-            airlines[_airline] = Airline({registered : true, balance : 0});
-        } else {
-            airlines[_airline] = Airline({registered : false, balance : 0});
-        }
+        // todo Only existing airline may register a new airline until there are at least four airlines registered
+        airlines[_airline] = Airline({registered : false, balance : 0});
     }
 
 
@@ -190,12 +194,11 @@ contract FlightSuretyData {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */
-    function fund
-    (
-    )
-    public
-    payable
+    function fund()
+    requireIsRegisteredAirline
+    public payable
     {
+        airlines[msg.sender].balance = airlines[msg.sender].balance.add(msg.value);
     }
 
     function getFlightKey
@@ -211,17 +214,8 @@ contract FlightSuretyData {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
-    /**
-    * @dev Fallback function for funding smart contract.
-    *
-    */
-    fallback()
-    external
-    payable
-    {
+
+    receive() external payable {
         fund();
     }
-
-
 }
-
