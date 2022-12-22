@@ -156,6 +156,7 @@ contract FlightSuretyData {
     external
     {
         airlines[_airline] = Airline({registered : true, balance : 0});
+        registeredAirlineCount = registeredAirlineCount.add(1);
     }
 
 

@@ -28,7 +28,7 @@ contract FlightSuretyApp {
 
     // track the number of vote to register an Airline
     // Key(Airline to register) => Number of vote
-    mapping(address => uint) votes;
+    mapping(address => uint) airlineRegistrationVotes;
 
     // Flight status codes
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
@@ -132,29 +132,32 @@ contract FlightSuretyApp {
         requireIsOperational
         // TODO fund >= 10
     external
-    returns (bool, uint256)
+    returns (bool success, uint256 votes)
     {
         require(!flightSuretyData.isAirline(_airline), 'Airline already registered');
+        require(!airlineRegistrationQueue[_airline][msg.sender], 'Vote already submitted by calling airline');
 
-        if (flightSuretyData.getRegisteredAirlineCount() > 4) {
-
-            require(!airlineRegistrationQueue[_airline][msg.sender], 'Airline already registered by calling airline');
+        if (flightSuretyData.getRegisteredAirlineCount() >= 4) {
 
             airlineRegistrationQueue[_airline][msg.sender] = true;
-            votes[_airline] = votes[_airline].add(1);
+
+            votes = airlineRegistrationVotes[_airline].add(1);
+            airlineRegistrationVotes[_airline] = votes;
 
             // if consensus reached - register airline.
-            if (votes[_airline].div(M).mul(100) >= flightSuretyData.getRegisteredAirlineCount()) {
+            if (votes.mul(100) >= flightSuretyData.getRegisteredAirlineCount().mul(M)) {
                 flightSuretyData.registerAirline(_airline);
-                return (true, votes[_airline]);
+
+                success = true;
 
             } else {
-                return (false, votes[_airline]);
+                success = false;
             }
 
         } else {
             flightSuretyData.registerAirline(_airline);
-            return (true, 1);
+            success = true;
+            votes = 1;
         }
     }
 

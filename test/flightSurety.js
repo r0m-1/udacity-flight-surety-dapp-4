@@ -7,12 +7,17 @@ contract('Flight Surety Tests', async (accounts) => {
 
     const foundingEth = web3.utils.toWei('10', "ether")
 
+    let airline1;
     let airline2 = accounts[2];
     let airline3 = accounts[3];
     let airline4 = accounts[4];
+    let airline5 = accounts[5];
+    let airline6 = accounts[6];
 
     before('setup contract', async () => {
         config = await Test.Scope(accounts);
+        airline1 = config.firstAirline;
+
         // FIXME await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
     });
 
@@ -132,5 +137,75 @@ contract('Flight Surety Tests', async (accounts) => {
             true,
             "Airline should not be able to register another airline if it hasn't provided funding"
         );
+
+        assert.equal(
+            await config.flightSuretyData.getRegisteredAirlineCount(),
+            4,
+            "RegisteredAirlineCount should be 4"
+        );
+    });
+
+    it('(airline) 5th Airline is registered when consensus is reached with 2/4 votes', async () => {
+
+        await config.flightSuretyData.sendTransaction({from: airline3, value: foundingEth});
+        await config.flightSuretyData.sendTransaction({from: airline4, value: foundingEth});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline5),
+            false,
+            "5th Airline should not be registered with 0/4 votes"
+        );
+
+        await config.flightSuretyApp.registerAirline(airline5, {from: airline2});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline5),
+            false,
+            "5th Airline should not be registered with 1/4 votes"
+        );
+
+        await config.flightSuretyApp.registerAirline(airline5, {from: airline3});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline5),
+            true,
+            "Airline 5th should be registered with 2/4 votes"
+        );
+    });
+
+    it('(airline) 6th Airline is registered when consensus is reached with 3/5 votes', async () => {
+
+        await config.flightSuretyData.sendTransaction({from: airline5, value: foundingEth});
+
+        // =============================================================================================================
+
+        await config.flightSuretyApp.registerAirline(airline6, {from: airline1});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline6),
+            false,
+            "6th Airline should not be registered with 1/5 votes"
+        );
+
+        // =============================================================================================================
+
+        await config.flightSuretyApp.registerAirline(airline6, {from: airline2});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline6),
+            false,
+            "6th Airline should not be registered with 2/5 votes"
+        );
+
+        // =============================================================================================================
+
+        await config.flightSuretyApp.registerAirline(airline6, {from: airline3});
+
+        assert.equal(
+            await config.flightSuretyData.isAirline.call(airline6),
+            true,
+            "6th Airline should be registered with 3/5 votes"
+        );
+
     });
 });
