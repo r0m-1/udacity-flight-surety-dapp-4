@@ -13,6 +13,7 @@ contract('Flight Surety Tests', async (accounts) => {
     let airline4 = accounts[4];
     let airline5 = accounts[5];
     let airline6 = accounts[6];
+    let airline7 = accounts[7];
 
     before('setup contract', async () => {
         config = await Test.Scope(accounts);
@@ -206,6 +207,19 @@ contract('Flight Surety Tests', async (accounts) => {
             true,
             "6th Airline should be registered with 3/5 votes"
         );
+
+    });
+
+    it('(airline) Airline cannot vote multiple times for the same airline', async () => {
+
+        await config.flightSuretyApp.registerAirline(airline7, {from: airline1});
+
+        try {
+            await config.flightSuretyApp.registerAirline(airline7, {from: airline1});
+            assert.equal(false, "should fail to registerAirline multiple times for the same airline")
+        } catch (e) {
+            // expected
+        }
 
     });
 });
