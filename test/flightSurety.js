@@ -19,7 +19,7 @@ contract('Flight Surety Tests', async (accounts) => {
         config = await Test.Scope(accounts);
         airline1 = config.firstAirline;
 
-        // FIXME await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
+        await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
     });
 
     /****************************************************************************************/

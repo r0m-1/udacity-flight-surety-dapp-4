@@ -10,6 +10,8 @@ contract FlightSuretyData {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
+    mapping(address => bool) authorizations;
+
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
 
@@ -69,15 +71,9 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireIsRegisteredAirline()
+    modifier requireAuthorizedCaller()
     {
-        require(airlines[tx.origin].registered, "Caller is not a registered airline");
-        _;
-    }
-
-    modifier requireIsFundedAirline()
-    {
-        require(airlines[tx.origin].balance >= 10, "Caller is not a funded airline");
+        require(authorizations[msg.sender], "Caller is not authorized");
         _;
     }
 
@@ -138,6 +134,14 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+    function authorizeCaller(address caller) external requireContractOwner {
+        authorizations[caller] = true;
+    }
+
+    function deauthorizeCaller(address caller) external requireContractOwner {
+        authorizations[caller] = false;
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -151,8 +155,7 @@ contract FlightSuretyData {
     (
         address _airline
     )
-    requireIsRegisteredAirline
-    requireIsFundedAirline
+    requireAuthorizedCaller()
     external
     {
         airlines[_airline] = Airline({registered : true, balance : 0});
@@ -167,6 +170,7 @@ contract FlightSuretyData {
     function buy
     (
     )
+    requireAuthorizedCaller()
     external payable {
 
     }
@@ -201,7 +205,6 @@ contract FlightSuretyData {
     *
     */
     function fund()
-    requireIsRegisteredAirline
     public payable
     {
         airlines[msg.sender].balance = airlines[msg.sender].balance.add(msg.value);
