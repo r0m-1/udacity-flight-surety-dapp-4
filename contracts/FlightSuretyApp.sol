@@ -85,6 +85,12 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireIsFundedAirline()
+    {
+        require(flightSuretyData.getFund(msg.sender) >= 10 ether, "Caller is not a funded airline");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -129,8 +135,9 @@ contract FlightSuretyApp {
         address _airline
     )
         requireIsRegisteredAirline
+        requireIsFundedAirline
         requireIsOperational
-        // TODO fund >= 10
+
     external
     returns (bool success, uint256 votes)
     {
@@ -390,6 +397,7 @@ contract FlightSuretyApp {
 
 }
 interface FlightSuretyData {
+    function getFund(address _airline) external returns (uint);
     function isAirline(address _airline) external returns (bool);
     function getRegisteredAirlineCount() external returns (uint);
     function registerAirline(address _airline) external;
