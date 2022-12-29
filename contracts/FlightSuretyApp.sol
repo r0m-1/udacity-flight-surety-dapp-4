@@ -17,7 +17,7 @@ contract FlightSuretyApp {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
-    FlightSuretyData flightSuretyData;
+    IFlightSuretyData flightSuretyData;
 
     // multi-party consensus of 50% of registered airlines
     uint private M = 50;
@@ -65,7 +65,7 @@ contract FlightSuretyApp {
     modifier requireIsOperational()
     {
         // Modify to call data contract's status
-        require(true, "Contract is currently not operational");
+        require(flightSuretyData.isOperational(), "Contract is currently not operational");
         _;
         // All modifiers require an "_" which indicates where the function body will be added
     }
@@ -91,6 +91,16 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireIsNotFlight(
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    )
+    {
+        require(!flightSuretyData.isFlight(airline, flight, timestamp), "Flight already exists");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -105,7 +115,7 @@ contract FlightSuretyApp {
     )
     {
         contractOwner = msg.sender;
-        flightSuretyData = FlightSuretyData(dataContract);
+        flightSuretyData = IFlightSuretyData(dataContract);
     }
 
     /********************************************************************************************/
@@ -114,10 +124,9 @@ contract FlightSuretyApp {
 
     function isOperational()
     public
-    pure
     returns (bool)
     {
-        return true;
+        return flightSuretyData.isOperational();
         // Modify to call data contract's status
     }
 
@@ -175,11 +184,16 @@ contract FlightSuretyApp {
     */
     function registerFlight
     (
+        address airline,
+        string memory flight,
+        uint256 timestamp
     )
+    requireIsRegisteredAirline
+    requireIsNotFlight(airline, flight, timestamp)
     external
-    pure
     {
-
+        require(msg.sender == airline, 'airline must register his flight');
+        flightSuretyData.registerFlight(airline, flight, timestamp);
     }
 
     /**
@@ -212,10 +226,11 @@ contract FlightSuretyApp {
 
         // Generate a unique key for storing the request
         bytes32 key = keccak256(abi.encodePacked(index, airline, flight, timestamp));
-        oracleResponses[key] = ResponseInfo({
-        requester : msg.sender,
-        isOpen : true
-        });
+        oracleResponses[key] =
+            ResponseInfo({
+                requester : msg.sender,
+                isOpen : true
+            });
 
         emit OracleRequest(index, airline, flight, timestamp);
     }
@@ -279,10 +294,11 @@ contract FlightSuretyApp {
 
         uint8[3] memory indexes = generateIndexes(msg.sender);
 
-        oracles[msg.sender] = Oracle({
-        isRegistered : true,
-        indexes : indexes
-        });
+        oracles[msg.sender] =
+            Oracle({
+                isRegistered : true,
+                indexes : indexes
+            });
     }
 
     function getMyIndexes
@@ -396,9 +412,14 @@ contract FlightSuretyApp {
     // endregion
 
 }
-interface FlightSuretyData {
+interface IFlightSuretyData {
     function getFund(address _airline) external returns (uint);
     function isAirline(address _airline) external returns (bool);
     function getRegisteredAirlineCount() external returns (uint);
     function registerAirline(address _airline) external;
+
+    function isFlight(address airline, string memory flight, uint256 timestamp) external returns (bool);
+    function registerFlight(address airline, string memory flight, uint256 timestamp) external;
+
+    function isOperational() external returns (bool);
 }

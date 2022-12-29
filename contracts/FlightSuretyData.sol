@@ -15,6 +15,10 @@ contract FlightSuretyData {
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
 
+    /***********************************************/
+    /* Airlines                                    */
+    /***********************************************/
+
     struct Airline {
         bool registered;
         uint balance;
@@ -23,6 +27,12 @@ contract FlightSuretyData {
     mapping(address => Airline) airlines;
 
     uint registeredAirlineCount;
+
+    /***********************************************/
+    /* Flights                                     */
+    /***********************************************/
+
+    mapping (bytes32 => bool) flights; // flights by key
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -117,7 +127,6 @@ contract FlightSuretyData {
     {
         return operational;
     }
-
 
     /**
     * @dev Sets contract operations on/off
@@ -221,6 +230,24 @@ contract FlightSuretyData {
     returns (bytes32)
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
+    }
+
+    function registerFlight(
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) external {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+        flights[key] = true;
+    }
+
+    function isFlight(
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) public view returns (bool) {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+        return flights[key];
     }
 
 
