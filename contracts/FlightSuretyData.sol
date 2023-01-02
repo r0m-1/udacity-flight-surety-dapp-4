@@ -34,6 +34,8 @@ contract FlightSuretyData {
 
     mapping (bytes32 => bool) flights; // flights by key
 
+    mapping (bytes32 => mapping (address => uint)) insurances; // flightKey => passenger => purchase amount
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -172,16 +174,40 @@ contract FlightSuretyData {
     }
 
 
+    // returns amount paid by passenger
+    function getInsurance(
+        address passenger,
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) public
+      view
+      returns (uint) {
+
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+
+        return insurances[key][passenger];
+    }
+
     /**
      * @dev Buy insurance for a flight
     *
     */
     function buy
     (
+        address passenger,
+        address airline,
+        string memory flight,
+        uint256 timestamp
     )
     requireAuthorizedCaller()
     external payable {
 
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+
+        require(insurances[key][passenger] == 0, 'passenger can buy only insurance once.');
+
+        insurances[key][passenger] = msg.value;
     }
 
     /**

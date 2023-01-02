@@ -49,6 +49,9 @@ contract FlightSuretyApp {
 
     mapping(bytes32 => Flight) private flights;
 
+    address payable dataContract;
+
+    mapping(bytes32 => uint8) private flightStatus; // FlightKey => Status
 
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -101,6 +104,16 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireIsFlight(
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    )
+    {
+        require(flightSuretyData.isFlight(airline, flight, timestamp), "Flight doesn't exist");
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -111,11 +124,12 @@ contract FlightSuretyApp {
     */
     constructor
     (
-        address payable dataContract
+        address payable _dataContract
     )
     {
         contractOwner = msg.sender;
-        flightSuretyData = IFlightSuretyData(dataContract);
+        dataContract = _dataContract;
+        flightSuretyData = IFlightSuretyData(_dataContract);
     }
 
     /********************************************************************************************/
@@ -134,6 +148,26 @@ contract FlightSuretyApp {
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
 
+    /**
+     * @dev Buy insurance for a flight
+     *
+     */
+    function buy
+    (
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    )
+    requireIsFlight(airline, flight, timestamp)
+    external payable {
+
+        // todo check amount / check money target
+        // Passengers may pay up to 1 ether for purchasing flight insurance.
+        require(msg.value > 0 ether, 'The insurance premium must be > 0 ether');
+        require(msg.value <= 1 ether, 'The insurance premium must be <= 1 ether');
+
+        flightSuretyData.buy { value: msg.value }(msg.sender, airline, flight, timestamp);
+    }
 
     /**
     * @dev Add an airline to the registration queue
@@ -196,6 +230,17 @@ contract FlightSuretyApp {
         flightSuretyData.registerFlight(airline, flight, timestamp);
     }
 
+    function getFlightStatus
+    (
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) external view returns (uint8) {
+
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        return flightStatus[flightKey];
+    }
+
     /**
      * @dev Called after oracle has updated flight status
     *
@@ -208,8 +253,9 @@ contract FlightSuretyApp {
         uint8 statusCode
     )
     internal
-    pure
     {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        flightStatus[flightKey] = statusCode;
     }
 
 
@@ -413,6 +459,7 @@ contract FlightSuretyApp {
 
 }
 interface IFlightSuretyData {
+    // Airlines
     function getFund(address _airline) external returns (uint);
     function isAirline(address _airline) external returns (bool);
     function getRegisteredAirlineCount() external returns (uint);
@@ -421,5 +468,9 @@ interface IFlightSuretyData {
     function isFlight(address airline, string memory flight, uint256 timestamp) external returns (bool);
     function registerFlight(address airline, string memory flight, uint256 timestamp) external;
 
+    // Passenger
+    function buy(address passenger, address airline, string memory flight, uint256 timestamp) external payable;
+
+    // Security
     function isOperational() external returns (bool);
 }

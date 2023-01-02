@@ -15,6 +15,23 @@ contract('Flight Surety Tests', async (accounts) => {
     let airline6 = accounts[6];
     let airline7 = accounts[7];
 
+    let passenger1 = accounts[10];
+    let passenger2 = accounts[11];
+    let passenger3 = accounts[12];
+
+    const TEST_ORACLES_COUNT = 12;
+
+    const STATUS_CODE_UNKNOWN = 0;
+    const STATUS_CODE_ON_TIME = 10;
+    const STATUS_CODE_LATE_AIRLINE = 20;
+    const STATUS_CODE_LATE_WEATHER = 30;
+    const STATUS_CODE_LATE_TECHNICAL = 40;
+    const STATUS_CODE_LATE_OTHER = 50;
+
+    const flight1 = '732';
+
+    const flightTime1 = new Date().getTime(); //TODO new Date('2020-12-12T11:10:00:00000Z').getTime();
+
     before('setup contract', async () => {
         config = await Test.Scope(accounts);
         airline1 = config.firstAirline;
@@ -222,4 +239,66 @@ contract('Flight Surety Tests', async (accounts) => {
         }
 
     });
+
+    it('(Oracles) can register oracles', async () => {
+
+        let fee = await config.flightSuretyApp.REGISTRATION_FEE.call();
+
+        for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+            //console.log('register oracle' + a);
+            await config.flightSuretyApp.registerOracle({from: accounts[a], value: fee});
+            // console.log('oracle registered' + a);
+        }
+    });
+
+    it('(airline) 1at Airline can register flight', async () => {
+
+        await config.flightSuretyApp.registerFlight(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
+
+        let status = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
+
+        assert.equal(status, STATUS_CODE_UNKNOWN, "status should be 0 (unkwown)")
+    });
+
+    it('(Oracles) can update flight status requests ', async () => {
+
+        await config.flightSuretyApp.fetchFlightStatus(config.firstAirline, flight1, flightTime1);
+
+        for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+
+            let oracleIndexes = await config.flightSuretyApp.getMyIndexes({from: accounts[a]});
+
+            for (let idx = 0; idx < 3; idx++) {
+
+                try {
+                    await config.flightSuretyApp.submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight1, flightTime1, STATUS_CODE_ON_TIME, {from: accounts[a]});
+
+                    let flightStatus = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
+                    console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight, timestamp, flightStatus);
+                } catch (e) {
+                    // console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
+                }
+            }
+        }
+
+        let flightStatusUpdated = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
+
+        assert.equal(flightStatusUpdated, STATUS_CODE_ON_TIME, "status should be 10 (ON_TIME)")
+    });
+
+    it('(Passengers) may pay up to 1 ether for purchasing flight insurance ', async () => {
+
+        let noInsurance = await config.flightSuretyData.getInsurance(passenger1, config.firstAirline, flight1, flightTime1);
+
+        assert.equal(noInsurance, web3.utils.toWei('0', 'ether'), "passenger 1 didn't pay insurance for flight 1");
+
+        await config.flightSuretyApp.buy(config.firstAirline, flight1, flightTime1, {
+            from: passenger1, value: web3.utils.toWei('1', 'ether')
+        });
+
+        let insurance = await config.flightSuretyData.getInsurance(passenger1, config.firstAirline, flight1, flightTime1);
+
+        assert.equal(insurance, web3.utils.toWei('1', 'ether'), "passenger 1 paid 1 ETH insurance for flight 1")
+    });
+
 });
