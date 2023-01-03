@@ -39,5 +39,8 @@ module.exports = {
     output: {
         path: path.join(__dirname, 'prod/server'),
         filename: 'server.js'
+    },
+    experiments: {
+        topLevelAwait: true,
     }
 }
