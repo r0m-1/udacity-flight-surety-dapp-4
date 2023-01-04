@@ -169,6 +169,7 @@ contract FlightSuretyData {
     (
         address _airline
     )
+    requireIsOperational()
     requireAuthorizedCaller()
     external
     {
@@ -183,9 +184,11 @@ contract FlightSuretyData {
         address airline,
         string memory flight,
         uint256 timestamp
-    ) public
-      view
-      returns (uint) {
+    )
+    requireIsOperational()
+    public
+    view
+    returns (uint) {
 
         bytes32 key = getFlightKey(airline, flight, timestamp);
 
@@ -203,6 +206,7 @@ contract FlightSuretyData {
         string memory flight,
         uint256 timestamp
     )
+    requireIsOperational()
     requireAuthorizedCaller()
     external payable {
 
@@ -217,8 +221,11 @@ contract FlightSuretyData {
     /*
         return the amount of credit owned by a passenger
     */
-    function getCredit(address passenger)
-        requireAuthorizedCaller()
+    function getCredit
+    (
+        address passenger
+    )
+    requireIsOperational()
     external view returns (uint) {
         return insurancePayouts[passenger];
     }
@@ -234,6 +241,7 @@ contract FlightSuretyData {
         uint payoutPercentage
     )
     requireAuthorizedCaller()
+    requireIsOperational()
     external
     {
         bytes32 key = getFlightKey(airline, flight, timestamp);
@@ -258,8 +266,9 @@ contract FlightSuretyData {
     function pay
     (
     )
+    requireIsOperational()
+    requireAuthorizedCaller()
     external
-    pure
     {
     }
 
@@ -269,6 +278,7 @@ contract FlightSuretyData {
     *
     */
     function fund()
+    requireIsOperational()
     public payable
     {
         airlines[msg.sender].balance = airlines[msg.sender].balance.add(msg.value);
@@ -291,7 +301,10 @@ contract FlightSuretyData {
         address airline,
         string memory flight,
         uint256 timestamp
-    ) external {
+    )
+    requireIsOperational()
+    requireAuthorizedCaller()
+    external {
         bytes32 key = getFlightKey(airline, flight, timestamp);
         flights[key] = true;
     }
@@ -300,7 +313,10 @@ contract FlightSuretyData {
         address airline,
         string memory flight,
         uint256 timestamp
-    ) public view returns (bool) {
+    )
+    requireIsOperational()
+    requireAuthorizedCaller()
+    public view returns (bool) {
         bytes32 key = getFlightKey(airline, flight, timestamp);
         return flights[key];
     }

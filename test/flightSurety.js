@@ -351,7 +351,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
         assert.equal(insuranceP1, web3.utils.toWei('1.0', 'ether'), "passenger 1 paid 1.0 ETH insurance for flight 2");
         assert.equal(insuranceP2, web3.utils.toWei('0.5', 'ether'), "passenger 2 paid 0.5 ETH insurance for flight 2");
-        assert.equal(insuranceP3, web3.utils.toWei('0.1', 'ether'), "passenger 3 paid 1.0 ETH insurance for flight 2");
+        assert.equal(insuranceP3, web3.utils.toWei('0.1', 'ether'), "passenger 3 paid 0.1 ETH insurance for flight 2");
     });
 
     it('(Oracles) can update status to LATE_AIRLINE (flight2)', async () => {
