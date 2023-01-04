@@ -44,8 +44,7 @@ function submitRandomStatus(accountIdx, index, airline, flight, timestamp) {
     //console.log(`submitRandomStatus ${accountIdx} ${index}, ${airline}, ${flight}, ${timestamp} from ${accounts[accountIdx]}`);
 
     if (accountIdx < TEST_ORACLES_LAST) {
-        flightSuretyApp.methods
-            .getMyIndexes()
+        flightSuretyApp.methods.getMyIndexes()
             .call({from: accounts[accountIdx], gas: 200000}, (error, indices) => {
 
                 if (error) {
