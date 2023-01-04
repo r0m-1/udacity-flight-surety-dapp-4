@@ -413,11 +413,6 @@ contract('Flight Surety Tests', async (accounts) => {
         const balanceEthBeforeWithdrawP1 = web3.utils.fromWei(balanceBeforeWithdrawP1, 'ether');
         const creditEthBeforeWithdrawP1 = web3.utils.fromWei(creditBeforeWithdrawP1, 'ether');
 
-        // console.log(balanceEthAfterWithdrawP1);
-        // console.log(balanceEthBeforeWithdrawP1);
-        // console.log(creditEthBeforeWithdrawP1);
-        // console.log((balanceEthAfterWithdrawP1 - balanceEthBeforeWithdrawP1 - creditEthBeforeWithdrawP1).toFixed(2));
-
         assert.equal(
             '-0.00',
             (balanceEthAfterWithdrawP1 - balanceEthBeforeWithdrawP1 - creditEthBeforeWithdrawP1).toFixed(2),
