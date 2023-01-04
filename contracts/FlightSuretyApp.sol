@@ -164,12 +164,15 @@ contract FlightSuretyApp {
     requireIsFlight(airline, flight, timestamp)
     external payable {
 
-        // todo check amount / check money target
         // Passengers may pay up to 1 ether for purchasing flight insurance.
         require(msg.value > 0 ether, 'The insurance premium must be > 0 ether');
         require(msg.value <= 1 ether, 'The insurance premium must be <= 1 ether');
 
         flightSuretyData.buy { value: msg.value }(msg.sender, airline, flight, timestamp);
+    }
+
+    function pay() external {
+        flightSuretyData.pay(msg.sender);
     }
 
     /**
@@ -484,6 +487,7 @@ interface IFlightSuretyData {
 
     // Passenger
     function buy(address passenger, address airline, string memory flight, uint256 timestamp) external payable;
+    function pay(address passenger) external;
 
     // Insurance
     function creditInsurees(address airline, string memory flight, uint256 timestamp, uint payoutPercentage) external;

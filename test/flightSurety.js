@@ -401,7 +401,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
         const balanceBeforeWithdrawP1 = await web3.eth.getBalance(passenger1);
 
-        await config.flightSuretyData.pay({from: passenger1});
+        await config.flightSuretyApp.pay({from: passenger1});
 
         const balanceAfterWithdrawP1 = await web3.eth.getBalance(passenger1);
 
