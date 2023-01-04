@@ -8,38 +8,50 @@ let config = Config['localhost'];
 let web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http', 'ws')));
 
 const accounts = await web3.eth.getAccounts();
-web3.eth.defaultAccount = accounts[0];
+//web3.eth.defaultAccount = accounts[0];
 
 let flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
 
-const TEST_ORACLES_COUNT = 20;
+// used to define the range of Oracle accounts
+const TEST_ORACLES_FIRST = 10;
+const TEST_ORACLES_LAST = 29;
 
 function registerOracles(index, fee, callback) {
 
-    //console.log(`register oracle[${index}] @ ${accounts[index]} for ${fee}`);
+    // console.log(`register oracle[${index}] @ ${accounts[index]} for ${fee}`);
 
     flightSuretyApp.methods.registerOracle()
-        .send({from: accounts[index], value: fee, gas: 4500000}, (error, result) => {
-            console.log(`oracle[${index}] registered`);
+        .send({from: accounts[index], value: fee, gas: '4500000', gasPrice: '100000000000'}, (error, result) => {
+            console.log(`oracle[${index}] ${accounts[index]} registered`);
 
-            if (index < TEST_ORACLES_COUNT) {
-                registerOracles(index + 1, fee, callback);
-            } else {
-                console.log(`${index} oracle registered`);
-                callback();
-            }
+            flightSuretyApp.methods.getMyIndexes().call({from: accounts[index], gas: 200000}, (error, result) => {
+                if (error) {
+                    console.error(error);
+                }
+
+                if (index < TEST_ORACLES_LAST) {
+                    registerOracles(index + 1, fee, callback);
+                } else {
+                    console.log(`${TEST_ORACLES_LAST - TEST_ORACLES_FIRST} oracle registered`);
+                    callback();
+                }
+            });
         });
 }
 
 function submitRandomStatus(accountIdx, index, airline, flight, timestamp) {
 
-    console.log(`submitRandomStatus ${accountIdx} ${index}, ${airline}, ${flight}, ${timestamp}`);
+    //console.log(`submitRandomStatus ${accountIdx} ${index}, ${airline}, ${flight}, ${timestamp} from ${accounts[accountIdx]}`);
 
-    if (accountIdx < TEST_ORACLES_COUNT) {
+    if (accountIdx < TEST_ORACLES_LAST) {
         flightSuretyApp.methods
             .getMyIndexes()
-            .call({from: accounts[accountIdx], gas: 100000})
-            .then(indices => {
+            .call({from: accounts[accountIdx], gas: 200000}, (error, indices) => {
+
+                if (error) {
+                    console.error(error);
+                }
+
                 console.log(indices);
 
                 if (indices[0] === index || indices[1] === index || indices[2] === index) {
@@ -49,12 +61,16 @@ function submitRandomStatus(accountIdx, index, airline, flight, timestamp) {
                     //console.log(`submitOracleResponse ${index}, ${airline}, ${flight}, ${timestamp}, ${statusCode}`);
 
                     flightSuretyApp.methods.submitOracleResponse(index, airline, flight, timestamp, statusCode)
-                        .call({from: accounts[accountIdx], gas: 100000})
-                        .then(() => {
+                        .send({from: accounts[accountIdx], gas: 100000}, (error, result) => {
+                            if (error) {
+                                console.error(error);
+                            }
+
                             console.log(`OracleResponseSubmitted ${index}, ${airline}, ${flight}, ${timestamp}, ${statusCode}`);
                             submitRandomStatus(accountIdx + 1, index, airline, flight, timestamp);
                         });
                 } else {
+                    console.log(`oracle ${accountIdx} doesn't have ${index}`);
                     submitRandomStatus(accountIdx + 1, index, airline, flight, timestamp);
                 }
             });
@@ -88,7 +104,7 @@ function handleEvents() {
         //console.log(event);
         console.log(`OracleRequest(index=${event.returnValues.index}, airline=${event.returnValues.airline}, flight=${event.returnValues.flight} timestamp=${event.returnValues.timestamp})`)
 
-        submitRandomStatus(1, event.returnValues.index, event.returnValues.airline, event.returnValues.flight, event.returnValues.timestamp);
+        submitRandomStatus(TEST_ORACLES_FIRST, event.returnValues.index, event.returnValues.airline, event.returnValues.flight, event.returnValues.timestamp);
 
     });
 }
@@ -97,7 +113,7 @@ flightSuretyApp.methods.REGISTRATION_FEE().call().then(async fee => {
 
     console.log(`REGISTRATION_FEE: ${fee}`);
 
-    registerOracles(1, fee, handleEvents);
+    registerOracles(TEST_ORACLES_FIRST, fee, handleEvents);
 });
 
 
