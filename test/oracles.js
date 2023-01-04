@@ -26,7 +26,7 @@ contract('Oracles', async (accounts) => {
 
         // ACT
         for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
-            await config.flightSuretyApp.registerOracle({from: accounts[a], value: fee});
+            await config.flightSuretyApp.registerOracle({from: accounts[a], value: fee, gas: '4500000'});
             let result = await config.flightSuretyApp.getMyIndexes.call({from: accounts[a]});
             console.log(`Oracle #${a} Registered: ${result[0]}, ${result[1]}, ${result[2]}`);
         }
@@ -49,7 +49,7 @@ contract('Oracles', async (accounts) => {
         for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
 
             // Get oracle information
-            let oracleIndexes = await config.flightSuretyApp.getMyIndexes.call({from: accounts[a]});
+            let oracleIndexes = await config.flightSuretyApp.getMyIndexes.call({from: accounts[a], gas: 200000});
             for (let idx = 0; idx < 3; idx++) {
 
                 try {

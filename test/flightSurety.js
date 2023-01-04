@@ -28,9 +28,11 @@ contract('Flight Surety Tests', async (accounts) => {
     const STATUS_CODE_LATE_TECHNICAL = 40;
     const STATUS_CODE_LATE_OTHER = 50;
 
-    const flight1 = '732';
+    const flight1 = '731';
+    const flight2 = '732';
 
-    const flightTime1 = new Date().getTime(); //TODO new Date('2020-12-12T11:10:00:00000Z').getTime();
+    const flightTime1 = Date.parse('2023-01-01:00:00:00:000Z');
+    const flightTime2 = Date.parse('2023-01-02:00:00:00:000Z');
 
     before('setup contract', async () => {
         config = await Test.Scope(accounts);
@@ -246,14 +248,14 @@ contract('Flight Surety Tests', async (accounts) => {
 
         for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
             //console.log('register oracle' + a);
-            await config.flightSuretyApp.registerOracle({from: accounts[a], value: fee});
+            await config.flightSuretyApp.registerOracle({from: accounts[a], value: fee, gas: '4500000'});
             // console.log('oracle registered' + a);
         }
     });
 
     it('(airline) 1at Airline can register flight', async () => {
 
-        await config.flightSuretyApp.registerFlight(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
+        await config.flightSuretyApp.registerFlight(config.firstAirline, flight1, flightTime1, {from: config.firstAirline, gas: '4500000'});
 
         let status = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
 
@@ -271,12 +273,13 @@ contract('Flight Surety Tests', async (accounts) => {
             for (let idx = 0; idx < 3; idx++) {
 
                 try {
-                    await config.flightSuretyApp.submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight1, flightTime1, STATUS_CODE_ON_TIME, {from: accounts[a]});
+                    await config.flightSuretyApp
+                        .submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight1, flightTime1, STATUS_CODE_ON_TIME, {from: accounts[a], gas: '4500000'});
 
                     let flightStatus = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
-                    console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight, timestamp, flightStatus);
+                    console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1, flightStatus);
                 } catch (e) {
-                    // console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
+                    console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1);
                 }
             }
         }
