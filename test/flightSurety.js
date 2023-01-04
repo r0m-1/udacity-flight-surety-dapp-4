@@ -19,7 +19,7 @@ contract('Flight Surety Tests', async (accounts) => {
     let passenger2 = accounts[11];
     let passenger3 = accounts[12];
 
-    const TEST_ORACLES_COUNT = 12;
+    const TEST_ORACLES_COUNT = 20;
 
     const STATUS_CODE_UNKNOWN = 0;
     const STATUS_CODE_ON_TIME = 10;
@@ -253,16 +253,34 @@ contract('Flight Surety Tests', async (accounts) => {
         }
     });
 
-    it('(airline) 1at Airline can register flight', async () => {
+    it('(airline) 1st Airline can register flight(1)', async () => {
 
-        await config.flightSuretyApp.registerFlight(config.firstAirline, flight1, flightTime1, {from: config.firstAirline, gas: '4500000'});
+        await config.flightSuretyApp.registerFlight(config.firstAirline, flight1, flightTime1, {
+            from: config.firstAirline,
+            gas: '4500000'
+        });
 
         let status = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
 
         assert.equal(status, STATUS_CODE_UNKNOWN, "status should be 0 (unkwown)")
     });
 
-    it('(Oracles) can update flight status requests ', async () => {
+    it('(Passengers) may pay up to 1 ether for purchasing flight insurance (flight1)', async () => {
+
+        let noInsurance = await config.flightSuretyData.getPremiums(passenger1, config.firstAirline, flight1, flightTime1);
+
+        assert.equal(noInsurance, web3.utils.toWei('0', 'ether'), "passenger 1 didn't pay insurance for flight 1");
+
+        await config.flightSuretyApp.buy(config.firstAirline, flight1, flightTime1, {
+            from: passenger1, value: web3.utils.toWei('1', 'ether')
+        });
+
+        let insurance = await config.flightSuretyData.getPremiums(passenger1, config.firstAirline, flight1, flightTime1);
+
+        assert.equal(insurance, web3.utils.toWei('1', 'ether'), "passenger 1 paid 1 ETH insurance for flight 1")
+    });
+
+    it('(Oracles) can update status to ON_TIME (flight1)', async () => {
 
         await config.flightSuretyApp.fetchFlightStatus(config.firstAirline, flight1, flightTime1);
 
@@ -274,12 +292,15 @@ contract('Flight Surety Tests', async (accounts) => {
 
                 try {
                     await config.flightSuretyApp
-                        .submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight1, flightTime1, STATUS_CODE_ON_TIME, {from: accounts[a], gas: '4500000'});
+                        .submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight1, flightTime1, STATUS_CODE_ON_TIME, {
+                            from: accounts[a],
+                            gas: '4500000'
+                        });
 
                     let flightStatus = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
-                    console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1, flightStatus);
+                    //console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1, flightStatus);
                 } catch (e) {
-                    console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1);
+                    //console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1);
                 }
             }
         }
@@ -287,21 +308,90 @@ contract('Flight Surety Tests', async (accounts) => {
         let flightStatusUpdated = await config.flightSuretyApp.getFlightStatus(config.firstAirline, flight1, flightTime1, {from: config.firstAirline});
 
         assert.equal(flightStatusUpdated, STATUS_CODE_ON_TIME, "status should be 10 (ON_TIME)")
+
     });
 
-    it('(Passengers) may pay up to 1 ether for purchasing flight insurance ', async () => {
+    it('(Passenger) should not receive payout for ON_TIME (flight1)', async () => {
 
-        let noInsurance = await config.flightSuretyData.getInsurance(passenger1, config.firstAirline, flight1, flightTime1);
+        let passenger1Credit = await config.flightSuretyData.getCredit(passenger1, {from: config.flightSuretyApp.address});
 
-        assert.equal(noInsurance, web3.utils.toWei('0', 'ether'), "passenger 1 didn't pay insurance for flight 1");
+        assert.equal(passenger1Credit, 0, "no credit payout for flight ON_TIME")
 
-        await config.flightSuretyApp.buy(config.firstAirline, flight1, flightTime1, {
-            from: passenger1, value: web3.utils.toWei('1', 'ether')
+    });
+
+    it('(airline) 2nd Airline can register flight 2', async () => {
+
+        await config.flightSuretyApp.registerFlight(airline2, flight2, flightTime2, {
+            from: airline2,
+            gas: '4500000'
         });
 
-        let insurance = await config.flightSuretyData.getInsurance(passenger1, config.firstAirline, flight1, flightTime1);
+        let status = await config.flightSuretyApp.getFlightStatus(airline2, flight2, flightTime2, {from: airline2});
 
-        assert.equal(insurance, web3.utils.toWei('1', 'ether'), "passenger 1 paid 1 ETH insurance for flight 1")
+        assert.equal(status, STATUS_CODE_UNKNOWN, "status should be 0 (unkwown)")
     });
 
+    it('(Passengers) may pay up to 1 ether for purchasing flight insurance (flight2)', async () => {
+
+        await config.flightSuretyApp.buy(airline2, flight2, flightTime2, {
+            from: passenger1, gas: '4500000', value: web3.utils.toWei('1', 'ether')
+        });
+
+        await config.flightSuretyApp.buy(airline2, flight2, flightTime2, {
+            from: passenger2, gas: '4500000', value: web3.utils.toWei('0.5', 'ether')
+        });
+
+        await config.flightSuretyApp.buy(airline2, flight2, flightTime2, {
+            from: passenger3, gas: '4500000', value: web3.utils.toWei('0.1', 'ether')
+        });
+
+        let insuranceP1 = await config.flightSuretyData.getPremiums(passenger1, airline2, flight2, flightTime2);
+        let insuranceP2 = await config.flightSuretyData.getPremiums(passenger2, airline2, flight2, flightTime2);
+        let insuranceP3 = await config.flightSuretyData.getPremiums(passenger3, airline2, flight2, flightTime2);
+
+        assert.equal(insuranceP1, web3.utils.toWei('1.0', 'ether'), "passenger 1 paid 1.0 ETH insurance for flight 2");
+        assert.equal(insuranceP2, web3.utils.toWei('0.5', 'ether'), "passenger 2 paid 0.5 ETH insurance for flight 2");
+        assert.equal(insuranceP3, web3.utils.toWei('0.1', 'ether'), "passenger 3 paid 1.0 ETH insurance for flight 2");
+    });
+
+    it('(Oracles) can update status to LATE_AIRLINE (flight2)', async () => {
+
+        await config.flightSuretyApp.fetchFlightStatus(airline2, flight2, flightTime2);
+
+        for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+
+            let oracleIndexes = await config.flightSuretyApp.getMyIndexes({from: accounts[a]});
+
+            for (let idx = 0; idx < 3; idx++) {
+
+                try {
+                    await config.flightSuretyApp
+                        .submitOracleResponse(oracleIndexes[idx], airline2, flight2, flightTime2, STATUS_CODE_LATE_AIRLINE, {
+                            from: accounts[a],
+                            gas: '4500000'
+                        });
+
+                    let flightStatus = await config.flightSuretyApp.getFlightStatus(airline2, flight2, flightTime2, {from: airline2});
+                    //console.log('\n Post', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1, flightStatus);
+                } catch (e) {
+                    //console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight1, flightTime1);
+                }
+            }
+        }
+
+        let flightStatusUpdated = await config.flightSuretyApp.getFlightStatus(airline2, flight2, flightTime2, {from: airline2});
+
+        assert.equal(flightStatusUpdated, STATUS_CODE_LATE_AIRLINE, "status should be 20 (LATE_AIRLINE)")
+    });
+
+    it('(Passenger) should receive payout for LATE_AIRLINE (flight2)', async () => {
+
+        let passenger1Credit = await config.flightSuretyData.getCredit(passenger1, {from: config.flightSuretyApp.address});
+        let passenger2Credit = await config.flightSuretyData.getCredit(passenger2, {from: config.flightSuretyApp.address});
+        let passenger3Credit = await config.flightSuretyData.getCredit(passenger3, {from: config.flightSuretyApp.address});
+
+        assert.equal(passenger1Credit, web3.utils.toWei('1.50', "ether"), "Expect credit payout for flight(2) LATE_AIRLINE")
+        assert.equal(passenger2Credit, web3.utils.toWei('0.75', "ether"), "Expect credit payout for flight(2) LATE_AIRLINE")
+        assert.equal(passenger3Credit, web3.utils.toWei('0.15', "ether"), "Expect credit payout for flight(2) LATE_AIRLINE")
+    });
 });

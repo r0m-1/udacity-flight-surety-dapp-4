@@ -19,6 +19,9 @@ contract FlightSuretyApp {
 
     IFlightSuretyData flightSuretyData;
 
+    // 1.5X the amount paid
+    uint PAYOUT_PERCENTAGE = 150;
+
     // multi-party consensus of 50% of registered airlines
     uint private M = 50;
 
@@ -243,8 +246,8 @@ contract FlightSuretyApp {
 
     /**
      * @dev Called after oracle has updated flight status
-    *
-    */
+     *   Credit passengers who bought insurance.
+     */
     function processFlightStatus
     (
         address airline,
@@ -255,7 +258,18 @@ contract FlightSuretyApp {
     internal
     {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
-        flightStatus[flightKey] = statusCode;
+
+        if (flightStatus[flightKey] == STATUS_CODE_UNKNOWN) {
+
+            flightStatus[flightKey] = statusCode;
+
+            if (statusCode == STATUS_CODE_LATE_AIRLINE ||
+            statusCode == STATUS_CODE_LATE_TECHNICAL ||
+                statusCode == STATUS_CODE_LATE_OTHER) {
+
+                flightSuretyData.creditInsurees(airline, flight, timestamp, PAYOUT_PERCENTAGE);
+            }
+        }
     }
 
 
@@ -470,6 +484,9 @@ interface IFlightSuretyData {
 
     // Passenger
     function buy(address passenger, address airline, string memory flight, uint256 timestamp) external payable;
+
+    // Insurance
+    function creditInsurees(address airline, string memory flight, uint256 timestamp, uint payoutPercentage) external;
 
     // Security
     function isOperational() external returns (bool);

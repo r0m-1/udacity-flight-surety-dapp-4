@@ -35,6 +35,9 @@ contract FlightSuretyData {
     mapping (bytes32 => bool) flights; // flights by key
 
     mapping (bytes32 => mapping (address => uint)) insurances; // flightKey => passenger => purchase amount
+    mapping (bytes32 => address[]) passengers; // // flightKey => passengers[]
+
+    mapping (address => uint) insurancePayouts; // passenger => payout amount
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -174,8 +177,8 @@ contract FlightSuretyData {
     }
 
 
-    // returns amount paid by passenger
-    function getInsurance(
+    // returns premium paid by the passenger
+    function getPremiums(
         address passenger,
         address airline,
         string memory flight,
@@ -191,8 +194,8 @@ contract FlightSuretyData {
 
     /**
      * @dev Buy insurance for a flight
-    *
-    */
+     *
+     */
     function buy
     (
         address passenger,
@@ -208,24 +211,50 @@ contract FlightSuretyData {
         require(insurances[key][passenger] == 0, 'passenger can buy only insurance once.');
 
         insurances[key][passenger] = msg.value;
+        passengers[key].push(passenger);
+    }
+
+    /*
+        return the amount of credit owned by a passenger
+    */
+    function getCredit(address passenger)
+        requireAuthorizedCaller()
+    external view returns (uint) {
+        return insurancePayouts[passenger];
     }
 
     /**
-     *  @dev Credits payouts to insurees
-    */
+     *  @dev Credits payouts to passengers who bought an insurance for a given flight.
+     */
     function creditInsurees
     (
+        address airline,
+        string memory flight,
+        uint256 timestamp,
+        uint payoutPercentage
     )
+    requireAuthorizedCaller()
     external
-    pure
     {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+
+        address[] memory flightPassengers = passengers[key];
+
+        // all passengers with insurance on this flight will receive payout credit.
+        for (uint i = 0; i < flightPassengers.length; i++) {
+            address passenger = flightPassengers[i];
+            uint credit = insurancePayouts[passenger];
+            insurancePayouts[passenger] = credit.add(insurances[key][passenger].mul(payoutPercentage).div(100));
+            delete insurances[key][passenger];
+        }
+        delete passengers[key];
     }
 
 
     /**
-     *  @dev Transfers eligible payout funds to insuree
+     *  @dev Transfers eligible payout funds to passengers who bought an insurance for a given flight
      *
-    */
+     */
     function pay
     (
     )
