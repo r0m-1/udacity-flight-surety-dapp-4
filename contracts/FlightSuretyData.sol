@@ -267,9 +267,15 @@ contract FlightSuretyData {
     (
     )
     requireIsOperational()
-    requireAuthorizedCaller()
+    // TODO requireAuthorizedCaller()
     external
     {
+        address payable passenger = payable(msg.sender);
+
+        require(insurancePayouts[passenger] > 0, 'Passenger has no credit.');
+        uint credit = insurancePayouts[passenger];
+        insurancePayouts[passenger] = 0;
+        passenger.transfer(credit);
     }
 
     /**

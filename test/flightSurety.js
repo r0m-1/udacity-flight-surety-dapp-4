@@ -394,4 +394,34 @@ contract('Flight Surety Tests', async (accounts) => {
         assert.equal(passenger2Credit, web3.utils.toWei('0.75', "ether"), "Expect credit payout for flight(2) LATE_AIRLINE")
         assert.equal(passenger3Credit, web3.utils.toWei('0.15', "ether"), "Expect credit payout for flight(2) LATE_AIRLINE")
     });
+
+    it('(Passenger) can withdraw any funds owed to them as a result of receiving credit for insurance payout', async () => {
+
+        const creditBeforeWithdrawP1 = await config.flightSuretyData.getCredit(passenger1, {from: config.flightSuretyApp.address});
+
+        const balanceBeforeWithdrawP1 = await web3.eth.getBalance(passenger1);
+
+        await config.flightSuretyData.pay({from: passenger1});
+
+        const balanceAfterWithdrawP1 = await web3.eth.getBalance(passenger1);
+
+        let creditAfterWithdrawP1 = await config.flightSuretyData.getCredit(passenger1, {from: config.flightSuretyApp.address});
+
+        assert.equal(creditAfterWithdrawP1, 0, "credit should be 0 after withdraw");
+
+        const balanceEthAfterWithdrawP1 = web3.utils.fromWei(balanceAfterWithdrawP1, 'ether');
+        const balanceEthBeforeWithdrawP1 = web3.utils.fromWei(balanceBeforeWithdrawP1, 'ether');
+        const creditEthBeforeWithdrawP1 = web3.utils.fromWei(creditBeforeWithdrawP1, 'ether');
+
+        // console.log(balanceEthAfterWithdrawP1);
+        // console.log(balanceEthBeforeWithdrawP1);
+        // console.log(creditEthBeforeWithdrawP1);
+        // console.log((balanceEthAfterWithdrawP1 - balanceEthBeforeWithdrawP1 - creditEthBeforeWithdrawP1).toFixed(2));
+
+        assert.equal(
+            '-0.00',
+            (balanceEthAfterWithdrawP1 - balanceEthBeforeWithdrawP1 - creditEthBeforeWithdrawP1).toFixed(2),
+            "pay should transfer credit to passenger");
+
+    });
 });
