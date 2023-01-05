@@ -85,5 +85,7 @@ export default class DOM {
 
         return el;
     }
+
+    static flightSelector = document.querySelector(`#flights-selector`);
 }
     

@@ -12,6 +12,16 @@ import './flightsurety.css';
         // Read transaction
         contract.isOperational((error, result) => {
             console.log(error, result);
+
+            contract.flights.forEach(flight => {
+                let el = document.createElement("option");
+                el.text = `${flight.flight} - ${new Date(flight.timestamp).toISOString()}`;
+                el.value = JSON.stringify(flight);
+                DOM.flightSelector.add(el);
+            });
+
+            DOM.elid('flight-number').value = (contract.flights[0].flight);
+
             display('Operational Status', 'Check if contract is operational', [{
                 label: 'Operational Status',
                 error: error,
@@ -33,9 +43,32 @@ import './flightsurety.css';
             });
         })
 
+        DOM.elid('flights-selector').addEventListener('change', () => {
+            let selected = JSON.parse(DOM.flightSelector.value);
+
+            DOM.elid('flight-number').value = (selected.flight);
+        });
+
+        DOM.elid('buy-insurance').addEventListener('click', () => {
+
+            let selected = JSON.parse(DOM.flightSelector.value);
+
+            let airline = selected.airline;
+            let flight = selected.flight;
+            let timestamp = Date.parse(selected.timestamp);
+
+            let amount = DOM.elid('premium').value;
+
+            // Write transaction
+            contract.buyInsurance(airline, flight, timestamp, amount, (error, result) => {
+                display('Passenger', 'buy insurance', [{
+                    label: 'buy insurance',
+                    error: error
+                }]);
+            });
+        })
+
     });
-
-
 })();
 
 
